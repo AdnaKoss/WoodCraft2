@@ -2,8 +2,6 @@ package unze.ptf.woodcraft.woodcraft.ui;
 
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import javafx.fxml.FXMLLoader;
-import java.io.IOException;
 import unze.ptf.woodcraft.woodcraft.dao.DocumentDao;
 import unze.ptf.woodcraft.woodcraft.dao.EdgeDao;
 import unze.ptf.woodcraft.woodcraft.dao.GuideDao;
@@ -71,23 +69,9 @@ public class SceneNavigator {
     }
 
     public void showMain() {
-        FXMLLoader loader = new FXMLLoader(SceneNavigator.class.getResource("MainView.fxml"));
-        loader.setControllerFactory(type -> {
-            if (type == MainController.class) {
-                return new MainController(sessionManager, authService, materialDao, documentDao, nodeDao, edgeDao,
-                        guideDao, shapeDao, geometryService, estimationService);
-            }
-            try {
-                return type.getDeclaredConstructor().newInstance();
-            } catch (Exception exception) {
-                throw new IllegalStateException("Failed to create controller", exception);
-            }
-        });
-        try {
-            Scene scene = new Scene(loader.load(), 1200, 800);
-            stage.setScene(scene);
-        } catch (IOException exception) {
-            throw new IllegalStateException("Failed to load main view", exception);
-        }
+        MainView view = new MainView(sessionManager, authService, userDao, materialDao, documentDao, nodeDao, edgeDao,
+                guideDao, shapeDao, geometryService, estimationService, this);
+        Scene scene = new Scene(view.getRoot(), 1200, 800);
+        stage.setScene(scene);
     }
 }
