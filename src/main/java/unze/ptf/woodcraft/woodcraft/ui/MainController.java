@@ -138,8 +138,12 @@ public class MainController {
         zoomOutButton.setOnAction(event -> updateScale(Math.max(2, scale - 2)));
 
         if (sessionManager.getCurrentUser() != null && sessionManager.getCurrentUser().getRole() != null) {
-            if (!sessionManager.getCurrentUser().getRole().name().equals("ADMIN")) {
-                menuBar.getMenus().remove(adminMenu);
+            if (sessionManager.getCurrentUser().getRole().name().equals("ADMIN")) {
+                adminMenu.setVisible(true);
+                adminMenu.setManaged(true);
+            } else {
+                adminMenu.setVisible(false);
+                adminMenu.setManaged(false);
             }
         }
     }
