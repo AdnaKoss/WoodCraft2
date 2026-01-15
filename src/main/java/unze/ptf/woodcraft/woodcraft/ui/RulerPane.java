@@ -7,7 +7,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.geometry.VPos;
 
-public class RulerPane extends Canvas {
+public class RulerPane extends Pane {
     public enum Orientation {
         HORIZONTAL,
         VERTICAL
@@ -53,6 +53,26 @@ public class RulerPane extends Canvas {
         draw();
     }
 
+    public RulerPane(Orientation orientation) {
+        this();
+        this.orientation = orientation;
+    }
+
+    public void setOrientation(Orientation orientation) {
+        this.orientation = orientation;
+        draw();
+    }
+
+    public void setHeight(double h) {
+        super.setPrefHeight(h);
+        draw();
+    }
+
+    public void setWidth(double w) {
+        super.setPrefWidth(w);
+        draw();
+    }
+
     public void setScale(double scale) {
         this.scale = scale;
         draw();
@@ -60,6 +80,21 @@ public class RulerPane extends Canvas {
 
     public double getScale() {
         return scale;
+    }
+
+    @Override
+    protected void layoutChildren() {
+        double width = clamp(getWidth());
+        double height = clamp(getHeight());
+        canvas.setWidth(width);
+        canvas.setHeight(height);
+    }
+
+    private double clamp(double value) {
+        if (value < 0) {
+            return 0;
+        }
+        return Math.min(value, MAX_CANVAS_SIZE);
     }
 
     private void draw() {
