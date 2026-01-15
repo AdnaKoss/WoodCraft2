@@ -10,13 +10,30 @@ public class RulerPane extends Canvas {
         VERTICAL
     }
 
-    private final Orientation orientation;
+    private static final double MAX_CANVAS_SIZE = 8192;
+
+    private Orientation orientation = Orientation.HORIZONTAL;
     private double scale = 10.0;
 
+    public RulerPane() {
+        widthProperty().addListener((obs, oldVal, newVal) -> {
+            clampWidth(newVal.doubleValue());
+            draw();
+        });
+        heightProperty().addListener((obs, oldVal, newVal) -> {
+            clampHeight(newVal.doubleValue());
+            draw();
+        });
+    }
+
     public RulerPane(Orientation orientation) {
+        this();
         this.orientation = orientation;
-        widthProperty().addListener((obs, oldVal, newVal) -> draw());
-        heightProperty().addListener((obs, oldVal, newVal) -> draw());
+    }
+
+    public void setOrientation(Orientation orientation) {
+        this.orientation = orientation;
+        draw();
     }
 
     public void setScale(double scale) {
@@ -54,6 +71,22 @@ public class RulerPane extends Canvas {
                     gc.fillText(Integer.toString(cm), 2, y + 10);
                 }
             }
+        }
+    }
+
+    private void clampWidth(double value) {
+        if (value > MAX_CANVAS_SIZE) {
+            setWidth(MAX_CANVAS_SIZE);
+        } else if (value < 0) {
+            setWidth(0);
+        }
+    }
+
+    private void clampHeight(double value) {
+        if (value > MAX_CANVAS_SIZE) {
+            setHeight(MAX_CANVAS_SIZE);
+        } else if (value < 0) {
+            setHeight(0);
         }
     }
 }
