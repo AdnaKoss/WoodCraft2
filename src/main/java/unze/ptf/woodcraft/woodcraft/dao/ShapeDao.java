@@ -60,6 +60,30 @@ public class ShapeDao {
         }
     }
 
+    public void insertWithId(ShapePolygon shape) {
+        String insertSql = """
+            INSERT INTO shapes(id, document_id, material_id, quantity, node_ids, area_cm2, perimeter_cm)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """;
+        try (Connection connection = Database.getConnection();
+             PreparedStatement insert = connection.prepareStatement(insertSql)) {
+            insert.setInt(1, shape.getId());
+            insert.setInt(2, shape.getDocumentId());
+            if (shape.getMaterialId() == null) {
+                insert.setNull(3, java.sql.Types.INTEGER);
+            } else {
+                insert.setInt(3, shape.getMaterialId());
+            }
+            insert.setInt(4, shape.getQuantity());
+            insert.setString(5, serializeNodeIds(shape));
+            insert.setDouble(6, shape.getAreaCm2());
+            insert.setDouble(7, shape.getPerimeterCm());
+            insert.executeUpdate();
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to insert shape with id", exception);
+        }
+    }
+
     public void replaceShapes(int documentId, List<ShapePolygon> shapes) {
         deleteByDocument(documentId);
         for (ShapePolygon shape : shapes) {

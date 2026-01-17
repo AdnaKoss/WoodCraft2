@@ -91,11 +91,31 @@ public final class DatabaseInitializer {
                     document_id INTEGER NOT NULL,
                     start_node_id INTEGER NOT NULL,
                     end_node_id INTEGER NOT NULL,
+                    control_start_x_cm REAL,
+                    control_start_y_cm REAL,
+                    control_end_x_cm REAL,
+                    control_end_y_cm REAL,
                     FOREIGN KEY (document_id) REFERENCES documents(id),
                     FOREIGN KEY (start_node_id) REFERENCES nodes(id),
                     FOREIGN KEY (end_node_id) REFERENCES nodes(id)
                 )
                 """);
+            try {
+                statement.executeUpdate("ALTER TABLE edges ADD COLUMN control_start_x_cm REAL");
+            } catch (SQLException ignored) {
+            }
+            try {
+                statement.executeUpdate("ALTER TABLE edges ADD COLUMN control_start_y_cm REAL");
+            } catch (SQLException ignored) {
+            }
+            try {
+                statement.executeUpdate("ALTER TABLE edges ADD COLUMN control_end_x_cm REAL");
+            } catch (SQLException ignored) {
+            }
+            try {
+                statement.executeUpdate("ALTER TABLE edges ADD COLUMN control_end_y_cm REAL");
+            } catch (SQLException ignored) {
+            }
             statement.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS guides (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -118,6 +138,38 @@ public final class DatabaseInitializer {
                     FOREIGN KEY (material_id) REFERENCES materials(id)
                 )
                 """);
+            statement.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS manual_shapes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    document_id INTEGER NOT NULL,
+                    points TEXT NOT NULL,
+                    FOREIGN KEY (document_id) REFERENCES documents(id)
+                )
+                """);
+            statement.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS dimensions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    document_id INTEGER NOT NULL,
+                    start_x_cm REAL NOT NULL,
+                    start_y_cm REAL NOT NULL,
+                    end_x_cm REAL NOT NULL,
+                    end_y_cm REAL NOT NULL,
+                    offset_x_cm REAL NOT NULL DEFAULT 0,
+                    offset_y_cm REAL NOT NULL DEFAULT 0,
+                    type TEXT NOT NULL DEFAULT 'ALIGNED',
+                    start_node_id INTEGER,
+                    end_node_id INTEGER,
+                    FOREIGN KEY (document_id) REFERENCES documents(id)
+                )
+                """);
+            try {
+                statement.executeUpdate("ALTER TABLE dimensions ADD COLUMN start_node_id INTEGER");
+            } catch (SQLException ignored) {
+            }
+            try {
+                statement.executeUpdate("ALTER TABLE dimensions ADD COLUMN end_node_id INTEGER");
+            } catch (SQLException ignored) {
+            }
         } catch (SQLException exception) {
             throw new IllegalStateException("Failed to initialize database", exception);
         }

@@ -1,5 +1,6 @@
 package unze.ptf.woodcraft.woodcraft.service;
 
+import javafx.geometry.Point2D;
 import unze.ptf.woodcraft.woodcraft.model.Edge;
 import unze.ptf.woodcraft.woodcraft.model.NodePoint;
 import unze.ptf.woodcraft.woodcraft.model.ShapePolygon;
@@ -61,7 +62,7 @@ public class GeometryService {
     }
 
     public ShapePolygon buildShapeFromCycle(int documentId, Integer materialId, List<Integer> nodeIds,
-                                            Map<Integer, NodePoint> nodeMap) {
+                                            Map<Integer, NodePoint> nodeMap, Map<String, Edge> edgeMap) {
         List<NodePoint> nodes = new ArrayList<>();
         for (Integer nodeId : nodeIds) {
             NodePoint node = nodeMap.get(nodeId);
@@ -69,8 +70,9 @@ public class GeometryService {
                 nodes.add(node);
             }
         }
-        double area = computeAreaCm2(nodes);
-        double perimeter = computePerimeterCm(nodes);
+        List<Point2D> sampled = samplePath(nodeIds, nodeMap, edgeMap);
+        double area = computeAreaCm2(sampled);
+        double perimeter = computePerimeterCm(sampled);
         return new ShapePolygon(0, documentId, materialId, 1, nodeIds, nodes, area, perimeter);
     }
 
@@ -79,6 +81,7 @@ public class GeometryService {
         for (NodePoint node : nodes) {
             nodeMap.put(node.getId(), node);
         }
+        Map<String, Edge> edgeMap = buildEdgeMap(edges);
         Map<Integer, List<Integer>> adjacency = new HashMap<>();
         for (Edge edge : edges) {
             adjacency.computeIfAbsent(edge.getStartNodeId(), key -> new ArrayList<>()).add(edge.getEndNodeId());
@@ -90,34 +93,34 @@ public class GeometryService {
         for (NodePoint node : nodes) {
             List<Integer> path = new ArrayList<>();
             path.add(node.getId());
-            dfsCycles(node.getId(), node.getId(), adjacency, path, seenCycles, shapes, nodeMap, documentId);
+            dfsCycles(node.getId(), node.getId(), adjacency, path, seenCycles, shapes, nodeMap, edgeMap, documentId);
         }
         return shapes;
     }
 
-    public double computeAreaCm2(List<NodePoint> nodes) {
-        if (nodes.size() < 3) {
+    public double computeAreaCm2(List<Point2D> points) {
+        if (points.size() < 3) {
             return 0;
         }
         double sum = 0;
-        for (int i = 0; i < nodes.size(); i++) {
-            NodePoint current = nodes.get(i);
-            NodePoint next = nodes.get((i + 1) % nodes.size());
-            sum += (current.getXCm() * next.getYCm()) - (next.getXCm() * current.getYCm());
+        for (int i = 0; i < points.size(); i++) {
+            Point2D current = points.get(i);
+            Point2D next = points.get((i + 1) % points.size());
+            sum += (current.getX() * next.getY()) - (next.getX() * current.getY());
         }
         return Math.abs(sum) / 2.0;
     }
 
-    public double computePerimeterCm(List<NodePoint> nodes) {
-        if (nodes.size() < 2) {
+    public double computePerimeterCm(List<Point2D> points) {
+        if (points.size() < 2) {
             return 0;
         }
         double perimeter = 0;
-        for (int i = 0; i < nodes.size(); i++) {
-            NodePoint current = nodes.get(i);
-            NodePoint next = nodes.get((i + 1) % nodes.size());
-            double dx = current.getXCm() - next.getXCm();
-            double dy = current.getYCm() - next.getYCm();
+        for (int i = 0; i < points.size(); i++) {
+            Point2D current = points.get(i);
+            Point2D next = points.get((i + 1) % points.size());
+            double dx = current.getX() - next.getX();
+            double dy = current.getY() - next.getY();
             perimeter += Math.hypot(dx, dy);
         }
         return perimeter;
@@ -130,6 +133,18 @@ public class GeometryService {
             adjacency.computeIfAbsent(edge.getEndNodeId(), key -> new ArrayList<>()).add(edge.getStartNodeId());
         }
         return adjacency;
+    }
+
+    private Map<String, Edge> buildEdgeMap(List<Edge> edges) {
+        Map<String, Edge> map = new HashMap<>();
+        for (Edge edge : edges) {
+            map.put(edgeKey(edge.getStartNodeId(), edge.getEndNodeId()), edge);
+        }
+        return map;
+    }
+
+    private String edgeKey(int a, int b) {
+        return a < b ? a + "-" + b : b + "-" + a;
     }
 
     private List<Integer> findPath(Map<Integer, List<Integer>> adjacency, int startNodeId, int endNodeId) {
@@ -172,7 +187,7 @@ public class GeometryService {
 
     private void dfsCycles(int start, int current, Map<Integer, List<Integer>> adjacency, List<Integer> path,
                            Set<String> seenCycles, List<ShapePolygon> shapes, Map<Integer, NodePoint> nodeMap,
-                           int documentId) {
+                           Map<String, Edge> edgeMap, int documentId) {
         List<Integer> neighbors = adjacency.getOrDefault(current, List.of());
         for (int neighbor : neighbors) {
             if (neighbor == start && path.size() >= 3) {
@@ -185,15 +200,73 @@ public class GeometryService {
                             cycleNodes.add(node);
                         }
                     }
-                    double area = computeAreaCm2(cycleNodes);
-                    double perimeter = computePerimeterCm(cycleNodes);
+                    List<Point2D> sampled = samplePath(path, nodeMap, edgeMap);
+                    double area = computeAreaCm2(sampled);
+                    double perimeter = computePerimeterCm(sampled);
                     shapes.add(new ShapePolygon(-1, documentId, null, 1, new ArrayList<>(path), cycleNodes, area, perimeter));
                 }
             } else if (!path.contains(neighbor)) {
                 path.add(neighbor);
-                dfsCycles(start, neighbor, adjacency, path, seenCycles, shapes, nodeMap, documentId);
+                dfsCycles(start, neighbor, adjacency, path, seenCycles, shapes, nodeMap, edgeMap, documentId);
                 path.remove(path.size() - 1);
             }
+        }
+    }
+
+    private List<Point2D> samplePath(List<Integer> nodeIds, Map<Integer, NodePoint> nodeMap,
+                                     Map<String, Edge> edgeMap) {
+        List<Point2D> points = new ArrayList<>();
+        for (int i = 0; i < nodeIds.size(); i++) {
+            int startId = nodeIds.get(i);
+            int endId = nodeIds.get((i + 1) % nodeIds.size());
+            NodePoint start = nodeMap.get(startId);
+            NodePoint end = nodeMap.get(endId);
+            if (start == null || end == null) {
+                continue;
+            }
+            Edge edge = edgeMap.get(edgeKey(startId, endId));
+            if (edge != null && edge.getControlStartXCm() != null && edge.getControlStartYCm() != null
+                    && edge.getControlEndXCm() != null && edge.getControlEndYCm() != null) {
+                Point2D c1;
+                Point2D c2;
+                if (edge.getStartNodeId() == startId) {
+                    c1 = new Point2D(edge.getControlStartXCm(), edge.getControlStartYCm());
+                    c2 = new Point2D(edge.getControlEndXCm(), edge.getControlEndYCm());
+                } else {
+                    c1 = new Point2D(edge.getControlEndXCm(), edge.getControlEndYCm());
+                    c2 = new Point2D(edge.getControlStartXCm(), edge.getControlStartYCm());
+                }
+                sampleCubic(points,
+                        new Point2D(start.getXCm(), start.getYCm()),
+                        c1, c2,
+                        new Point2D(end.getXCm(), end.getYCm()),
+                        20);
+            } else {
+                if (points.isEmpty()) {
+                    points.add(new Point2D(start.getXCm(), start.getYCm()));
+                }
+                points.add(new Point2D(end.getXCm(), end.getYCm()));
+            }
+        }
+        return points;
+    }
+
+    private void sampleCubic(List<Point2D> points, Point2D p0, Point2D p1, Point2D p2, Point2D p3, int segments) {
+        if (points.isEmpty()) {
+            points.add(p0);
+        }
+        for (int i = 1; i <= segments; i++) {
+            double t = (double) i / segments;
+            double u = 1 - t;
+            double x = u * u * u * p0.getX()
+                    + 3 * u * u * t * p1.getX()
+                    + 3 * u * t * t * p2.getX()
+                    + t * t * t * p3.getX();
+            double y = u * u * u * p0.getY()
+                    + 3 * u * u * t * p1.getY()
+                    + 3 * u * t * t * p2.getY()
+                    + t * t * t * p3.getY();
+            points.add(new Point2D(x, y));
         }
     }
 

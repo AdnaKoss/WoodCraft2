@@ -8,6 +8,7 @@ import unze.ptf.woodcraft.woodcraft.model.Document;
 import unze.ptf.woodcraft.woodcraft.model.Edge;
 import unze.ptf.woodcraft.woodcraft.model.NodePoint;
 
+import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -30,12 +31,12 @@ public class PdfExportService {
                 float canvasHeight = (float) document.getHeightCm() * POINTS_PER_CM;
 
                 content.setLineWidth(1);
-                content.setStrokingColor(120);
+                content.setStrokingColor(new Color(120, 120, 120));
                 content.addRect(originX, originY, canvasWidth, canvasHeight);
                 content.stroke();
 
                 content.setLineWidth(1.2f);
-                content.setStrokingColor(40);
+                content.setStrokingColor(new Color(40, 40, 40));
                 for (Edge edge : edges) {
                     NodePoint start = findNode(nodes, edge.getStartNodeId());
                     NodePoint end = findNode(nodes, edge.getEndNodeId());
@@ -46,8 +47,18 @@ public class PdfExportService {
                     float y1 = originY + (float) start.getYCm() * POINTS_PER_CM;
                     float x2 = originX + (float) end.getXCm() * POINTS_PER_CM;
                     float y2 = originY + (float) end.getYCm() * POINTS_PER_CM;
-                    content.moveTo(x1, y1);
-                    content.lineTo(x2, y2);
+                    if (edge.getControlStartXCm() != null && edge.getControlStartYCm() != null
+                            && edge.getControlEndXCm() != null && edge.getControlEndYCm() != null) {
+                        float cx1 = originX + edge.getControlStartXCm().floatValue() * POINTS_PER_CM;
+                        float cy1 = originY + edge.getControlStartYCm().floatValue() * POINTS_PER_CM;
+                        float cx2 = originX + edge.getControlEndXCm().floatValue() * POINTS_PER_CM;
+                        float cy2 = originY + edge.getControlEndYCm().floatValue() * POINTS_PER_CM;
+                        content.moveTo(x1, y1);
+                        content.curveTo(cx1, cy1, cx2, cy2, x2, y2);
+                    } else {
+                        content.moveTo(x1, y1);
+                        content.lineTo(x2, y2);
+                    }
                     content.stroke();
                 }
             }

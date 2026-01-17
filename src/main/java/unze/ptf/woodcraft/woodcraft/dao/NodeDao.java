@@ -54,6 +54,31 @@ public class NodeDao {
         }
     }
 
+    public void insertWithId(NodePoint node) {
+        String sql = "INSERT INTO nodes(id, document_id, x_cm, y_cm) VALUES (?, ?, ?, ?)";
+        try (Connection connection = Database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, node.getId());
+            statement.setInt(2, node.getDocumentId());
+            statement.setDouble(3, node.getXCm());
+            statement.setDouble(4, node.getYCm());
+            statement.executeUpdate();
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to insert node with id", exception);
+        }
+    }
+
+    public void deleteByDocument(int documentId) {
+        String sql = "DELETE FROM nodes WHERE document_id = ?";
+        try (Connection connection = Database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, documentId);
+            statement.executeUpdate();
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to delete nodes by document", exception);
+        }
+    }
+
     public List<NodePoint> findByDocument(int documentId) {
         String sql = "SELECT id, document_id, x_cm, y_cm FROM nodes WHERE document_id = ?";
         List<NodePoint> nodes = new ArrayList<>();

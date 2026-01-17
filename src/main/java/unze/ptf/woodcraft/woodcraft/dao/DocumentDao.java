@@ -105,6 +105,48 @@ public class DocumentDao {
         }
     }
 
+    public void deleteByIdCascade(int documentId) {
+        try (Connection connection = Database.getConnection()) {
+            try (PreparedStatement deleteDimensions = connection.prepareStatement(
+                    "DELETE FROM dimensions WHERE document_id = ?")) {
+                deleteDimensions.setInt(1, documentId);
+                deleteDimensions.executeUpdate();
+            }
+            try (PreparedStatement deleteEdges = connection.prepareStatement(
+                    "DELETE FROM edges WHERE document_id = ?")) {
+                deleteEdges.setInt(1, documentId);
+                deleteEdges.executeUpdate();
+            }
+            try (PreparedStatement deleteNodes = connection.prepareStatement(
+                    "DELETE FROM nodes WHERE document_id = ?")) {
+                deleteNodes.setInt(1, documentId);
+                deleteNodes.executeUpdate();
+            }
+            try (PreparedStatement deleteGuides = connection.prepareStatement(
+                    "DELETE FROM guides WHERE document_id = ?")) {
+                deleteGuides.setInt(1, documentId);
+                deleteGuides.executeUpdate();
+            }
+            try (PreparedStatement deleteShapes = connection.prepareStatement(
+                    "DELETE FROM shapes WHERE document_id = ?")) {
+                deleteShapes.setInt(1, documentId);
+                deleteShapes.executeUpdate();
+            }
+            try (PreparedStatement deleteManual = connection.prepareStatement(
+                    "DELETE FROM manual_shapes WHERE document_id = ?")) {
+                deleteManual.setInt(1, documentId);
+                deleteManual.executeUpdate();
+            }
+            try (PreparedStatement deleteDoc = connection.prepareStatement(
+                    "DELETE FROM documents WHERE id = ?")) {
+                deleteDoc.setInt(1, documentId);
+                deleteDoc.executeUpdate();
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to delete document", exception);
+        }
+    }
+
     private Document mapRow(ResultSet resultSet) throws SQLException {
         String unitValue = resultSet.getString("unit_system");
         UnitSystem unitSystem = unitValue == null ? UnitSystem.CM : UnitSystem.valueOf(unitValue);

@@ -3,7 +3,9 @@ package unze.ptf.woodcraft.woodcraft.ui;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -69,7 +71,24 @@ public class ProjectListView {
             });
         });
 
-        HBox actions = new HBox(10, newButton, openButton);
+        Button deleteButton = new Button("Obrisi");
+        deleteButton.setOnAction(event -> {
+            Document selected = list.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                return;
+            }
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                    "Obrisati projekt \"" + selected.getName() + "\"?", ButtonType.OK, ButtonType.CANCEL);
+            confirm.setHeaderText("Potvrda brisanja");
+            confirm.showAndWait().ifPresent(result -> {
+                if (result == ButtonType.OK) {
+                    documentDao.deleteByIdCascade(selected.getId());
+                    list.getItems().setAll(documentDao.findByUser(sessionManager.getCurrentUser().getId()));
+                }
+            });
+        });
+
+        HBox actions = new HBox(10, newButton, openButton, deleteButton);
         actions.setAlignment(Pos.CENTER_LEFT);
 
         VBox content = new VBox(10, title, list, actions);

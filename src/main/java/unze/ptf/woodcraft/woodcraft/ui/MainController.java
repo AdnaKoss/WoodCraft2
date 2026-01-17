@@ -254,7 +254,7 @@ public class MainController {
             Material material = getActiveMaterial();
             Integer materialId = material == null ? null : material.getId();
             ShapePolygon newShape = geometryService.buildShapeFromCycle(currentDocument.getId(), materialId,
-                    cycleResult.nodeIds(), nodeMap);
+                    cycleResult.nodeIds(), nodeMap, buildEdgeMap(existingEdges));
             if (!shapeExists(newShape.getNodeIds())) {
                 ShapePolygon saved = shapeDao.createShape(newShape);
                 shapes.add(saved);
@@ -364,13 +364,15 @@ public class MainController {
         for (NodePoint node : nodes) {
             nodeMap.put(node.getId(), node);
         }
+        List<Edge> edges = edgeDao.findByDocument(currentDocument.getId());
         List<ShapePolygon> stored = shapeDao.findByDocument(currentDocument.getId());
         for (ShapePolygon storedShape : stored) {
             ShapePolygon hydrated = geometryService.buildShapeFromCycle(
                     storedShape.getDocumentId(),
                     storedShape.getMaterialId(),
                     storedShape.getNodeIds(),
-                    nodeMap
+                    nodeMap,
+                    buildEdgeMap(edges)
             );
             shapes.add(new ShapePolygon(
                     storedShape.getId(),
@@ -379,8 +381,8 @@ public class MainController {
                     hydrated.getQuantity(),
                     hydrated.getNodeIds(),
                     hydrated.getNodes(),
-                    storedShape.getAreaCm2(),
-                    storedShape.getPerimeterCm()
+                    hydrated.getAreaCm2(),
+                    hydrated.getPerimeterCm()
             ));
         }
         canvasPane.setShapes(shapes);
@@ -397,7 +399,8 @@ public class MainController {
         Integer materialId = material == null ? null : material.getId();
         List<List<Integer>> cycles = geometryService.detectAllCycles(edges);
         for (List<Integer> cycle : cycles) {
-            ShapePolygon newShape = geometryService.buildShapeFromCycle(currentDocument.getId(), materialId, cycle, nodeMap);
+            ShapePolygon newShape = geometryService.buildShapeFromCycle(currentDocument.getId(), materialId, cycle,
+                    nodeMap, buildEdgeMap(edges));
             ShapePolygon saved = shapeDao.createShape(newShape);
             shapes.add(saved);
         }
@@ -468,6 +471,17 @@ public class MainController {
         if (mode == CanvasPane.Mode.DELETE_NODE) {
             clearSelection();
         }
+    }
+
+    private Map<String, Edge> buildEdgeMap(List<Edge> edges) {
+        Map<String, Edge> edgeMap = new HashMap<>();
+        for (Edge edge : edges) {
+            String key = edge.getStartNodeId() < edge.getEndNodeId()
+                    ? edge.getStartNodeId() + "-" + edge.getEndNodeId()
+                    : edge.getEndNodeId() + "-" + edge.getStartNodeId();
+            edgeMap.put(key, edge);
+        }
+        return edgeMap;
     }
 
     private Color parseColor(String value) {

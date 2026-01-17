@@ -62,4 +62,41 @@ public class GuideDao {
             throw new IllegalStateException("Failed to delete guide", exception);
         }
     }
+
+    public void insertWithId(Guide guide) {
+        String sql = "INSERT INTO guides(id, document_id, orientation, position_cm) VALUES (?, ?, ?, ?)";
+        try (Connection connection = Database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, guide.getId());
+            statement.setInt(2, guide.getDocumentId());
+            statement.setString(3, guide.getOrientation().name());
+            statement.setDouble(4, guide.getPositionCm());
+            statement.executeUpdate();
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to insert guide with id", exception);
+        }
+    }
+
+    public void deleteByDocument(int documentId) {
+        String sql = "DELETE FROM guides WHERE document_id = ?";
+        try (Connection connection = Database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, documentId);
+            statement.executeUpdate();
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to delete guides by document", exception);
+        }
+    }
+
+    public void updatePosition(int guideId, double positionCm) {
+        String sql = "UPDATE guides SET position_cm = ? WHERE id = ?";
+        try (Connection connection = Database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setDouble(1, positionCm);
+            statement.setInt(2, guideId);
+            statement.executeUpdate();
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to update guide", exception);
+        }
+    }
 }

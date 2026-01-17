@@ -3,8 +3,10 @@ package unze.ptf.woodcraft.woodcraft.ui;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import unze.ptf.woodcraft.woodcraft.dao.DocumentDao;
+import unze.ptf.woodcraft.woodcraft.dao.DimensionDao;
 import unze.ptf.woodcraft.woodcraft.dao.EdgeDao;
 import unze.ptf.woodcraft.woodcraft.dao.GuideDao;
+import unze.ptf.woodcraft.woodcraft.dao.ManualShapeDao;
 import unze.ptf.woodcraft.woodcraft.dao.MaterialDao;
 import unze.ptf.woodcraft.woodcraft.dao.NodeDao;
 import unze.ptf.woodcraft.woodcraft.dao.ShapeDao;
@@ -21,27 +23,31 @@ public class SceneNavigator {
     private final UserDao userDao;
     private final MaterialDao materialDao;
     private final DocumentDao documentDao;
+    private final DimensionDao dimensionDao;
     private final NodeDao nodeDao;
     private final EdgeDao edgeDao;
     private final GuideDao guideDao;
     private final ShapeDao shapeDao;
+    private final ManualShapeDao manualShapeDao;
     private final GeometryService geometryService;
     private final EstimationService estimationService;
 
     public SceneNavigator(Stage stage, SessionManager sessionManager, AuthService authService, UserDao userDao,
-                          MaterialDao materialDao, DocumentDao documentDao, NodeDao nodeDao, EdgeDao edgeDao,
-                          GuideDao guideDao, ShapeDao shapeDao, GeometryService geometryService,
-                          EstimationService estimationService) {
+                          MaterialDao materialDao, DocumentDao documentDao, DimensionDao dimensionDao, NodeDao nodeDao,
+                          EdgeDao edgeDao, GuideDao guideDao, ShapeDao shapeDao, ManualShapeDao manualShapeDao,
+                          GeometryService geometryService, EstimationService estimationService) {
         this.stage = stage;
         this.sessionManager = sessionManager;
         this.authService = authService;
         this.userDao = userDao;
         this.materialDao = materialDao;
         this.documentDao = documentDao;
+        this.dimensionDao = dimensionDao;
         this.nodeDao = nodeDao;
         this.edgeDao = edgeDao;
         this.guideDao = guideDao;
         this.shapeDao = shapeDao;
+        this.manualShapeDao = manualShapeDao;
         this.geometryService = geometryService;
         this.estimationService = estimationService;
     }
@@ -75,8 +81,8 @@ public class SceneNavigator {
     }
 
     public void showMain(int documentId) {
-        MainView view = new MainView(sessionManager, authService, userDao, materialDao, documentDao, nodeDao, edgeDao,
-                guideDao, shapeDao, geometryService, estimationService, this, documentId);
+        MainView view = new MainView(sessionManager, authService, userDao, materialDao, documentDao, dimensionDao,
+                nodeDao, edgeDao, guideDao, shapeDao, manualShapeDao, geometryService, estimationService, this, documentId);
         Scene scene = new Scene(view.getRoot(), 1200, 800);
         stage.setScene(scene);
     }

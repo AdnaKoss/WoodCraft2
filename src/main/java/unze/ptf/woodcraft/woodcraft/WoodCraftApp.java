@@ -3,8 +3,10 @@ package unze.ptf.woodcraft.woodcraft;
 import javafx.application.Application;
 import javafx.stage.Stage;
 import unze.ptf.woodcraft.woodcraft.dao.DocumentDao;
+import unze.ptf.woodcraft.woodcraft.dao.DimensionDao;
 import unze.ptf.woodcraft.woodcraft.dao.EdgeDao;
 import unze.ptf.woodcraft.woodcraft.dao.GuideDao;
+import unze.ptf.woodcraft.woodcraft.dao.ManualShapeDao;
 import unze.ptf.woodcraft.woodcraft.dao.MaterialDao;
 import unze.ptf.woodcraft.woodcraft.dao.NodeDao;
 import unze.ptf.woodcraft.woodcraft.dao.ShapeDao;
@@ -24,10 +26,12 @@ public class WoodCraftApp extends Application {
         UserDao userDao = new UserDao();
         MaterialDao materialDao = new MaterialDao();
         DocumentDao documentDao = new DocumentDao();
+        DimensionDao dimensionDao = new DimensionDao();
         NodeDao nodeDao = new NodeDao();
         EdgeDao edgeDao = new EdgeDao();
         GuideDao guideDao = new GuideDao();
         ShapeDao shapeDao = new ShapeDao();
+        ManualShapeDao manualShapeDao = new ManualShapeDao();
 
         SessionManager sessionManager = new SessionManager();
         AuthService authService = new AuthService(userDao, sessionManager);
@@ -35,7 +39,8 @@ public class WoodCraftApp extends Application {
         EstimationService estimationService = new EstimationService(materialDao, shapeDao, geometryService);
 
         SceneNavigator navigator = new SceneNavigator(stage, sessionManager, authService, userDao, materialDao,
-                documentDao, nodeDao, edgeDao, guideDao, shapeDao, geometryService, estimationService);
+                documentDao, dimensionDao, nodeDao, edgeDao, guideDao, shapeDao, manualShapeDao,
+                geometryService, estimationService);
         navigator.showInitialScene();
     }
 }
