@@ -93,6 +93,7 @@ public class CanvasPane extends Pane {
     private Consumer<Point2D> onCanvasClicked;
     private IntConsumer onNodeClicked;
     private IntConsumer onShapeClicked;
+    private BiConsumer<Integer, Point2D> onShapeClickedWithPoint;
     private BiConsumer<Integer, Point2D> onNodeMoveFinished;
     private Consumer<List<NodePoint>> onNodesMoved;
     private Consumer<EdgeControlUpdate> onEdgeControlsChanged;
@@ -399,6 +400,10 @@ public class CanvasPane extends Pane {
 
     public void setOnShapeClicked(IntConsumer handler) {
         this.onShapeClicked = handler;
+    }
+
+    public void setOnShapeClickedWithPoint(BiConsumer<Integer, Point2D> handler) {
+        this.onShapeClickedWithPoint = handler;
     }
 
     public void setOnNodeMoveFinished(BiConsumer<Integer, Point2D> handler) {
@@ -1526,15 +1531,23 @@ public class CanvasPane extends Pane {
             }
         });
         polygon.setOnMouseClicked(event -> {
+            Point2D local = sceneToLocal(event.getSceneX(), event.getSceneY());
+            Point2D cmPoint = toCm(local.getX(), local.getY());
             if (mode == Mode.SELECT) {
                 if (onShapeClicked != null) {
                     onShapeClicked.accept(shape.getId());
+                }
+                if (onShapeClickedWithPoint != null) {
+                    onShapeClickedWithPoint.accept(shape.getId(), cmPoint);
                 }
                 event.consume();
                 return;
             }
             if (onShapeClicked != null) {
                 onShapeClicked.accept(shape.getId());
+            }
+            if (onShapeClickedWithPoint != null) {
+                onShapeClickedWithPoint.accept(shape.getId(), cmPoint);
             }
             event.consume();
         });

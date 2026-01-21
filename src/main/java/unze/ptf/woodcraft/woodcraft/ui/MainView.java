@@ -239,6 +239,7 @@ public class MainView {
         canvasPane.setOnCanvasClicked(this::handleCanvasClick);
         canvasPane.setOnNodeClicked(this::handleNodeClick);
         canvasPane.setOnShapeClicked(this::handleShapeClick);
+        canvasPane.setOnShapeClickedWithPoint(this::handleShapeClickAt);
         canvasPane.setOnNodeMoveFinished(this::handleNodeMoveFinished);
         canvasPane.setOnNodesMoved(this::handleNodesMoved);
         canvasPane.setOnEdgeControlsChanged(this::handleEdgeControlsChanged);
@@ -768,6 +769,49 @@ public class MainView {
         selectedNodeId = null;
         canvasPane.setSelectedShape(shapeId);
         updatePlankPreview();
+        updateSelectedShapeSummary();
+    }
+
+    private void handleShapeClickAt(int shapeId, Point2D cmPoint) {
+        if (currentDocument == null) {
+            return;
+        }
+        if (currentTool != CanvasPane.Mode.DRAW_SHAPE) {
+            return;
+        }
+        ShapePolygon shape = findShapeById(shapeId);
+        if (shape == null) {
+            return;
+        }
+        List<Edge> edges = edgeDao.findByDocument(currentDocument.getId());
+        EdgeSnapHit hit = findEdgeSnap(shape, cmPoint, edges);
+        if (hit == null) {
+            return;
+        }
+        if (hit.existingNodeId != null) {
+            handleNodeClick(hit.existingNodeId);
+            return;
+        }
+        if (hit.edgeId < 0) {
+            return;
+        }
+        pushHistory();
+        Point2D snapped = clampToCanvas(hit.snapPoint);
+        NodePoint node = nodeDao.create(currentDocument.getId(), snapped.getX(), snapped.getY());
+        int nodeId = node.getId();
+        edgeDao.deleteById(hit.edgeId);
+        edgeDao.create(currentDocument.getId(), hit.startNodeId, nodeId);
+        edgeDao.create(currentDocument.getId(), nodeId, hit.endNodeId);
+        if (lastDrawNodeId != null && lastDrawNodeId != nodeId) {
+            edgeDao.create(currentDocument.getId(), lastDrawNodeId, nodeId);
+        }
+        lastDrawNodeId = nodeId;
+        selectedNodeId = nodeId;
+        selectedShapeId = null;
+        canvasPane.setSelectedNode(nodeId);
+        canvasPane.setNodes(nodeDao.findByDocument(currentDocument.getId()));
+        canvasPane.setEdges(edgeDao.findByDocument(currentDocument.getId()));
+        recomputeShapes();
         updateSelectedShapeSummary();
     }
 
@@ -1385,6 +1429,73 @@ public class MainView {
             y = snapY;
         }
         return new Point2D(x, y);
+    }
+
+    private EdgeSnapHit findEdgeSnap(ShapePolygon shape, Point2D cmPoint, List<Edge> edges) {
+        List<NodePoint> nodes = resolveShapeNodes(shape);
+        if (nodes.size() < 2) {
+            return null;
+        }
+        double thresholdCm = 8.0 / scale;
+        double bestDistance = Double.MAX_VALUE;
+        EdgeSnapHit best = null;
+        for (int i = 0; i < nodes.size(); i++) {
+            NodePoint a = nodes.get(i);
+            NodePoint b = nodes.get((i + 1) % nodes.size());
+            Point2D start = new Point2D(a.getXCm(), a.getYCm());
+            Point2D end = new Point2D(b.getXCm(), b.getYCm());
+            Point2D projection = projectToSegment(start, end, cmPoint);
+            double distance = projection.distance(cmPoint);
+            if (distance > thresholdCm || distance >= bestDistance) {
+                continue;
+            }
+            Integer existingNodeId = null;
+            if (projection.distance(start) <= thresholdCm) {
+                existingNodeId = a.getId();
+            } else if (projection.distance(end) <= thresholdCm) {
+                existingNodeId = b.getId();
+            }
+            int edgeId = findEdgeId(edges, a.getId(), b.getId());
+            bestDistance = distance;
+            best = new EdgeSnapHit(a.getId(), b.getId(), edgeId, projection, existingNodeId);
+        }
+        return best;
+    }
+
+    private List<NodePoint> resolveShapeNodes(ShapePolygon shape) {
+        if (shape.getNodes() != null && !shape.getNodes().isEmpty()) {
+            return shape.getNodes();
+        }
+        List<NodePoint> nodes = nodeDao.findByDocument(currentDocument.getId());
+        Map<Integer, NodePoint> nodeMap = new HashMap<>();
+        for (NodePoint node : nodes) {
+            nodeMap.put(node.getId(), node);
+        }
+        List<NodePoint> resolved = new ArrayList<>();
+        if (shape.getNodeIds() != null) {
+            for (Integer nodeId : shape.getNodeIds()) {
+                NodePoint node = nodeMap.get(nodeId);
+                if (node != null) {
+                    resolved.add(node);
+                }
+            }
+        }
+        return resolved;
+    }
+
+    private Point2D projectToSegment(Point2D start, Point2D end, Point2D point) {
+        Point2D ab = end.subtract(start);
+        double denom = ab.dotProduct(ab);
+        if (denom < 1e-8) {
+            return start;
+        }
+        double t = point.subtract(start).dotProduct(ab) / denom;
+        t = Math.max(0, Math.min(1, t));
+        return start.add(ab.multiply(t));
+    }
+
+    private record EdgeSnapHit(int startNodeId, int endNodeId, int edgeId,
+                               Point2D snapPoint, Integer existingNodeId) {
     }
 
     private void loadShapesFromDb() {
